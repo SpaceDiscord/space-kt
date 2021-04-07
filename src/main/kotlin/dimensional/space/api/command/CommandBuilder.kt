@@ -1,15 +1,12 @@
-@file:OptIn(ExperimentalContracts::class)
-
 package dimensional.space.api.command
 
-import dev.kord.common.entity.Permission
+import dimensional.space.api.command.params.Parameter
 import dimensional.space.api.command.ratelimit.RateLimit
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 typealias CommandInvocation = suspend (CommandContext) -> Unit
-typealias InlinedCommandCondition = suspend (CommandContext) -> Unit
 
 class CommandBuilder {
 
@@ -24,16 +21,6 @@ class CommandBuilder {
   var category: CommandCategory = Command.defaultCategory
 
   /**
-   * Permissions required by the invoker
-   */
-  var userPerms = Items<Permission>()
-
-  /**
-   * Permissions required by us
-   */
-  var clientPerms = Items<Permission>()
-
-  /**
    * The cooldown to use
    */
   var rateLimit: RateLimit = Command.defaultCooldown
@@ -46,7 +33,7 @@ class CommandBuilder {
   /**
    * All parameters of this command
    */
-  var parameters = hashMapOf<String, CommandParameter<*>>()
+  var parameters = mutableListOf<Parameter<*>>()
 
   /**
    * Aliases of this command
@@ -59,8 +46,26 @@ class CommandBuilder {
   var invokeHandler: CommandInvocation? = null
 
   /**
+   * Restrictions this command has to follow
+   */
+  var restrictions: CommandRestrictions = CommandRestrictions()
+
+  /**
+   * Applies restrictions to this command.
+   */
+  @OptIn(ExperimentalContracts::class)
+  fun restrictions(block: CommandRestrictions.() -> Unit) {
+    contract {
+      callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+    }
+
+    restrictions.apply(block)
+  }
+
+  /**
    *
    */
+  @OptIn(ExperimentalContracts::class)
   fun onInvoke(block: CommandInvocation) {
     contract {
       callsInPlace(block, InvocationKind.EXACTLY_ONCE)
@@ -70,7 +75,7 @@ class CommandBuilder {
   }
 
   fun build(): Command {
-    check(name.isNullOrEmpty()) {
+    check(!name.isNullOrEmpty()) {
       "The name of this command must not be null or empty."
     }
 
@@ -83,7 +88,9 @@ class CommandBuilder {
       aliases = aliases,
       description = description,
       parameters = parameters,
-      onInvoke = invokeHandler!!
+      onInvoke = invokeHandler!!,
+      restrictions = restrictions,
+      rateLimit = rateLimit
     )
   }
 
@@ -102,3 +109,6 @@ class CommandBuilder {
     }
   }
 }
+
+fun command(builder: CommandBuilder.() -> Unit) =
+  CommandBuilder().apply(builder).build()

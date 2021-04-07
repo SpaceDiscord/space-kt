@@ -1,5 +1,3 @@
 package dimensional.space.api.errors
 
-import kotlin.reflect.KClass
-
-class ResolverNotRegistered(type: KClass<*>) : IllegalStateException("No resolvers registered for `${type.simpleName}`")
+class ResolverNotRegistered(type: Class<*>) : IllegalStateException("No resolvers registered for `${type.simpleName}`")

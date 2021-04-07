@@ -1,14 +1,16 @@
 package dimensional.space.api
 
+import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
 import dimensional.space.api.command.PrefixStrategy
-import dimensional.space.api.command.args.ConversionStrategy
+import dimensional.space.api.command.params.ConversionStrategy
 import dimensional.space.api.command.ratelimit.RateLimitStrategy
 import dimensional.space.api.event.SpaceEvent
 import dimensional.space.internal.command.DefaultRateLimitStrategy
 import dimensional.space.internal.conversion.ConverterManager
 import dimensional.space.internal.conversion.DefaultConversionStrategy
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.MutableSharedFlow
 import java.util.concurrent.Executors
@@ -36,6 +38,16 @@ class SpaceBuilder(val kord: Kord) {
    * The rate-limit strategy
    */
   var rateLimitStrategy: RateLimitStrategy? = null
+
+  /**
+   * List of User IDs to view as "developers"
+   */
+  var ownerIds = hashSetOf<Long>()
+
+  /**
+   * Dispatcher to use
+   */
+  var dispatcher = Dispatchers.Default
 
   /**
    * The event flow used by [Space.events] to publish [SpaceEvent].
@@ -83,7 +95,9 @@ class SpaceBuilder(val kord: Kord) {
       ignoreBots = ignoreBots,
       ignoreSelf = ignoreSelf,
       eventFlow = eventFlow,
-      commandDispatcher = commandDispatcher!!
+      dispatcher = dispatcher,
+      commandDispatcher = commandDispatcher!!,
+      ownerIds = ownerIds.map { Snowflake(it) }.toHashSet()
     )
   }
 }

@@ -9,13 +9,13 @@ import dev.kord.rest.builder.message.MessageCreateBuilder
 import dimensional.space.api.command.CommandContext
 import dimensional.space.api.Space
 import dimensional.space.api.command.Command
-import dimensional.space.api.command.CommandParameters
+import dimensional.space.api.command.params.Parameters
 
 class CommandContextImpl(
   override val space: Space,
   override val message: Message
 ) : CommandContext {
-  override lateinit var args: CommandParameters
+  override lateinit var params: Parameters
   override lateinit var command: Command
   override lateinit var prefix: String
   override lateinit var trigger: String

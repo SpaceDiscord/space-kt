@@ -1,9 +1,9 @@
 package dimensional.space.internal.conversion
 
 import dimensional.space.api.command.CommandContext
-import dimensional.space.api.command.CommandParameter
-import dimensional.space.api.command.args.ConversionStrategy
-import dimensional.space.api.command.args.ConversionData
+import dimensional.space.api.command.params.ConversionData
+import dimensional.space.api.command.params.ConversionStrategy
+import dimensional.space.api.command.params.Parameter
 
 class DefaultConversionStrategy(val converters: ConverterManager) : ConversionStrategy {
   override val name = "default"
@@ -47,7 +47,7 @@ class DefaultConversionStrategy(val converters: ConverterManager) : ConversionSt
     /**
      * Parses the next argument in [args]
      */
-    suspend fun <T : Any> parse(param: CommandParameter<T>): T? {
+    suspend fun <T> parse(param: Parameter<T>): T? {
       val converter = converters[param.type]
 
       /* convert next argument */

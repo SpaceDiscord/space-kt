@@ -1,6 +1,6 @@
-package dimensional.space.api.command
+package dimensional.space.api.command.params
 
-class CommandParameters(private val map: HashMap<String, Any?>) {
+class Parameters(private val map: HashMap<String, Any?>) {
   /**
    */
   fun contains(name: String): Boolean {

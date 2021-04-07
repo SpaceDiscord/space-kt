@@ -8,6 +8,7 @@ import dev.kord.core.entity.channel.MessageChannel
 import dev.kord.rest.builder.message.EmbedBuilder
 import dev.kord.rest.builder.message.MessageCreateBuilder
 import dimensional.space.api.Space
+import dimensional.space.api.command.params.Parameters
 
 interface CommandContext {
   /**
@@ -38,7 +39,7 @@ interface CommandContext {
   /**
    * Command arguments
    */
-  val args: CommandParameters
+  val params: Parameters
 
   /**
    * The User that invoked the [command]

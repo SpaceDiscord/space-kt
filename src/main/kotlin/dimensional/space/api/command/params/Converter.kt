@@ -1,4 +1,4 @@
-package dimensional.space.api.command.args
+package dimensional.space.api.command.params
 
 import dimensional.space.api.command.CommandContext
 

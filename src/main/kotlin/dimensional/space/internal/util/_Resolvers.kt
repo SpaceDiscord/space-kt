@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.firstOrNull
 /**
  * Adds all of the default resolvers to the [ConverterManager.registry]
  */
-fun ConverterManager.addDefaultConverters() = this {
+fun ConverterManager.addDefaultConverters() {
   addPrimitiveConverters()
   addKordConverters()
 }
@@ -42,7 +42,7 @@ fun ConverterManager.addPrimitiveConverters() {
  * Adds resolvers for Kord entities..
  */
 fun ConverterManager.addKordConverters() {
-  registry[Snowflake::class] = SnowflakeConverter
+  registry[Snowflake::class.java] = SnowflakeConverter
 
   /* member */
   addConverter { ctx, content ->

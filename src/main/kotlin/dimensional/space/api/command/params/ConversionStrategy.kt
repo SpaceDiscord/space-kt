@@ -1,7 +1,6 @@
-package dimensional.space.api.command.args
+package dimensional.space.api.command.params
 
 import dimensional.space.api.command.CommandContext
-import dimensional.space.api.command.CommandParameter
 
 /**
  * Consumes input from a User and resolves it into usable primitives or classes.
@@ -24,5 +23,5 @@ interface ConversionStrategy {
 data class ConversionData(
   val input: List<String>,
   val delimiter: Char,
-  val parameters: List<CommandParameter<*>>
+  val parameters: List<Parameter<*>>
 )

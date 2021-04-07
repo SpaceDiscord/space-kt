@@ -3,10 +3,13 @@ package dimensional.space.api
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
 import dev.kord.core.event.message.MessageCreateEvent
+import dev.kord.core.kordLogger
 import dev.kord.core.on
 import dimensional.space.api.command.Command
+import dimensional.space.api.command.params.Parameters
 import dimensional.space.api.command.PrefixStrategy
-import dimensional.space.api.command.args.ConversionStrategy
+import dimensional.space.api.command.params.ConversionData
+import dimensional.space.api.command.params.ConversionStrategy
 import dimensional.space.api.command.ratelimit.RateLimitStrategy
 import dimensional.space.api.event.SpaceEvent
 import dimensional.space.api.event.command.CommandRateLimitedEvent
@@ -14,11 +17,12 @@ import dimensional.space.api.event.command.DeveloperOnlyEvent
 import dimensional.space.api.event.command.GuildOnlyEvent
 import dimensional.space.api.event.command.UnknownCommandEvent
 import dimensional.space.internal.CommandContextImpl
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.*
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
+import kotlin.coroutines.CoroutineContext
 
 class Space(
   val kord: Kord,
@@ -29,8 +33,12 @@ class Space(
   val ignoreSelf: Boolean,
   val ownerIds: HashSet<Snowflake>,
   private val eventFlow: MutableSharedFlow<SpaceEvent>,
+  private val dispatcher: CoroutineDispatcher,
   val commandDispatcher: CoroutineDispatcher
-) {
+) : CoroutineScope {
+  override val coroutineContext: CoroutineContext
+    get() = dispatcher + Job()
+
   /**
    * List of all registered commands.
    */
@@ -68,12 +76,18 @@ class Space(
       val args = message.content.drop(prefix.length).split(" +".toRegex()).toMutableList()
       val trigger = args.removeFirst().toLowerCase()
 
+      /* assign values to context */
+      ctx.prefix = prefix
+      ctx.trigger = trigger
+
       /* get command or dispatch unknown command event */
       val command = commands.firstOrNull { it.triggeredBy(trigger) }
       if (command == null) {
-        eventFlow.emit(UnknownCommandEvent(ctx, prefix, trigger))
+        eventFlow.emit(UnknownCommandEvent(ctx))
         return@on
       }
+
+      ctx.command = command
 
       /* check rate-limit */
       val entityId = command.rateLimit?.let { RateLimitStrategy.getEntityId(ctx, it.bucket) }
@@ -85,7 +99,7 @@ class Space(
       }
 
       /* check developer only */
-      if (command.developerOnly && ownerIds.contains(ctx.author.id)) {
+      if (command.restrictions.developerOnly && ownerIds.contains(ctx.author.id)) {
         eventFlow.emit(DeveloperOnlyEvent(ctx, command))
         return@on
       }
@@ -93,13 +107,31 @@ class Space(
       /* guild related checks */
       val guild = ctx.getGuild()
       if (guild != null) {
-        if (command.clientPerms.isNotEmpty()) {
+        if (command.restrictions.clientPerms.isNotEmpty()) {
           val me = guild.getMember(kord.selfId)
           me.getPermissions()
         }
-      } else if (command.guildOnly) {
+      } else if (command.restrictions.guildOnly) {
         eventFlow.emit(GuildOnlyEvent(ctx, command))
         return@on
+      }
+
+      /* get parameters */
+      val params = if (command.parameters.isNotEmpty()) {
+        conversionStrategy.consume(ctx, ConversionData(
+          input = args,
+          delimiter = ' ',
+          parameters = command.parameters
+        ))
+      } else {
+        hashMapOf()
+      }
+
+      ctx.params = Parameters(params)
+
+      /* execute command */
+      commandDispatcher.invoke {
+        command.onInvoke(ctx)
       }
     }
   }
@@ -130,3 +162,28 @@ fun Space(kord: Kord, builder: SpaceBuilder.() -> Unit): Space {
     .apply(builder)
     .build()
 }
+
+
+/**
+ * Convenience method that will invoke the [consumer] on every event [T] created by [Space.events].
+ *
+ * @param scope Coroutine scope
+ * @param consumer
+ *
+ * @return Job, used to cancel any further processing of [T]
+ */
+inline fun <reified T : SpaceEvent> Space.on(
+  scope: CoroutineScope = this,
+  noinline consumer: suspend T.() -> Unit
+): Job =
+  events.buffer(Channel.UNLIMITED).filterIsInstance<T>()
+    .onEach {
+      scope.launch {
+        runCatching { consumer(it) }
+          .onFailure {
+            kordLogger.catching(it)
+          }
+      }
+    }
+    .launchIn(scope)
+

@@ -1,14 +1,16 @@
 package dimensional.space.api.command
 
+import dimensional.space.api.command.params.Parameter
 import dimensional.space.api.command.ratelimit.RateLimit
 
 data class Command(
   val name: String,
-  val parameters: HashMap<String, CommandParameter<*>>,
+  val parameters: List<Parameter<*>>,
   val description: String,
   val aliases: List<String>,
   val onInvoke: CommandInvocation,
-
+  val restrictions: CommandRestrictions,
+  val rateLimit: RateLimit?
 ) {
   /**
    * Phrases that will trigger this command.
